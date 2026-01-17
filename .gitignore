@@ -1,0 +1,10 @@
+bin/
+obj/
+testbin/
+testobj/
+htmlcov/
+*.o
+*.out
+.DS_Store
+**/.DS_Store
+
