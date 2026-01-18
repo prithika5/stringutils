@@ -3,8 +3,48 @@
 namespace StringUtils{
 
 std::string Slice(const std::string &str, ssize_t start, ssize_t end) noexcept{
-    // Replace code here
-    return "";
+    
+    int length = str.size();
+
+    if(end == 0){
+        end = length;
+    }
+
+    if(start < 0){
+        start = length + start;
+    }
+
+    if(end < 0){
+        end = length + end;
+    }
+
+    if (start < 0){
+        start = 0;
+    }
+
+    if (end < 0){
+        end = 0;
+    }
+
+    if (start > length){
+        start = length;
+    }
+
+    if (end > length){
+        end = length;
+    }
+
+
+    if(start > length && end > length){
+        return "";
+    }
+
+
+    if(start >= end){
+        return "";
+    }
+    
+    return str.substr(start, end - start);
 }
 
 std::string Capitalize(const std::string &str) noexcept{
