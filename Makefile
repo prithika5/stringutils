@@ -1,10 +1,8 @@
-
 # Define the tools in use
 AR=ar
 CC=gcc
 CXX=g++
-GTEST_PREFIX = $(shell brew --prefix googletest)
-   
+
 # Define the directories
 INC_DIR			= ./include
 SRC_DIR			= ./src
@@ -18,14 +16,20 @@ TESTCOVER_DIR 	= ./htmlcov
 
 # Define the flags
 DEFINES			= 
-INCLUDE			+= -I $(INC_DIR) -I $(GTEST_PREFIX)/include
+INCLUDE			+= -I $(INC_DIR)
 CFLAGS			+=
 CPPFLAGS		+= -std=c++17
-LDFLAGS			= -L$(GTEST_PREFIX)/lib
+LDFLAGS			= 
+
+# Add Google Test include and library paths
+GTEST_INCLUDE_PATH = /usr/local/vcpkg/installed/arm64-linux/include
+GTEST_LIB_PATH = /usr/local/vcpkg/installed/arm64-linux/lib
+INCLUDE += -I $(GTEST_INCLUDE_PATH)
+LDFLAGS += -L $(GTEST_LIB_PATH)
 
 TEST_CFLAGS		= $(CFLAGS) -O0 -g --coverage
 TEST_CPPFLAGS	= $(CPPFLAGS) -fno-inline
-TEST_LDFLAGS	= $(LDFLAGS) -lgtest -lgtest_main -lpthread
+TEST_LDFLAGS	= $(LDFLAGS) /usr/local/vcpkg/installed/arm64-linux/lib/manual-link/libgtest_main.a -lgtest -lpthread
 
 # Define the test object files
 TEST_OBJ_FILES	= $(TESTOBJ_DIR)/StringUtilsTest.o $(TESTOBJ_DIR)/StringUtils.o
@@ -38,9 +42,9 @@ all: directories runtests
 
 runtests: $(TEST_TARGET)
 	$(TEST_TARGET)
-	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,source,format,unsupported
-	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,unsupported
-	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR) --ignore-errors inconsistent,corrupt,unsupported
+	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info
+	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' --output-file $(TESTCOVER_DIR)/coverage.info
+	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR)
 
 $(TEST_TARGET): $(TEST_OBJ_FILES)
 	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_TARGET)
