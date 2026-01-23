@@ -14,27 +14,38 @@ TESTOBJ_DIR		= ./testobj
 TESTBIN_DIR		= ./testbin
 TESTCOVER_DIR 	= ./htmlcov
 
+# vcpkg configuration
+VCPKG_DIR ?= /Users/prithikathilakarajan/Projects/vcpkg
+VCPKG_TRIPLET ?= arm64-osx
+GTEST_INCLUDE_PATH ?= $(VCPKG_DIR)/packages/gtest_$(VCPKG_TRIPLET)/include
+GTEST_LIB_PATH ?= $(VCPKG_DIR)/packages/gtest_$(VCPKG_TRIPLET)/lib
+GTEST_MANUAL_LINK_PATH ?= $(GTEST_LIB_PATH)/manual-link
+
 # Define the flags
 DEFINES			= 
 INCLUDE			+= -I $(INC_DIR)
 CFLAGS			+=
 CPPFLAGS		+= -std=c++17
-LDFLAGS			= 
+LDFLAGS			 = 
 
-# Add Google Test include and library paths
-GTEST_INCLUDE_PATH = /usr/local/vcpkg/installed/arm64-linux/include
-GTEST_LIB_PATH = /usr/local/vcpkg/installed/arm64-linux/lib
-INCLUDE += -I $(GTEST_INCLUDE_PATH)
-LDFLAGS += -L $(GTEST_LIB_PATH)
+ifdef GTEST_INCLUDE_PATH
+	INCLUDE += -I $(GTEST_INCLUDE_PATH)
+endif
+
+ifdef GTEST_LIB_PATH
+	LDFLAGS += -L $(GTEST_LIB_PATH)
+endif
+
+TEST_LDFLAGS = $(LDFLAGS) $(GTEST_MANUAL_LINK_PATH)/libgtest_main.a -lgtest -lpthread
+
+ifdef GTEST_MAIN_A
+	TEST_LDFLAGS = $(LDFLAGS) $(GTEST_MAIN_A) -lgtest -lpthread
+endif
+
 
 TEST_CFLAGS		= $(CFLAGS) -O0 -g --coverage
 TEST_CPPFLAGS	= $(CPPFLAGS) -fno-inline
-TEST_LDFLAGS	= $(LDFLAGS) /usr/local/vcpkg/installed/arm64-linux/lib/manual-link/libgtest_main.a -lgtest -lpthread
-
-# Define the test object files
 TEST_OBJ_FILES	= $(TESTOBJ_DIR)/StringUtilsTest.o $(TESTOBJ_DIR)/StringUtils.o
-
-# Define the test target
 TEST_TARGET		= $(TESTBIN_DIR)/teststrutils 
 
 
@@ -42,9 +53,9 @@ all: directories runtests
 
 runtests: $(TEST_TARGET)
 	$(TEST_TARGET)
-	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info
-	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' --output-file $(TESTCOVER_DIR)/coverage.info
-	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR)
+	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,unsupported,format
+	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' '*/gtest/*' --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,unsupported,format
+	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR) --ignore-errors inconsistent,unsupported,format,corrupt,category
 
 $(TEST_TARGET): $(TEST_OBJ_FILES)
 	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_TARGET)

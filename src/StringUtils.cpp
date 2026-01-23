@@ -75,7 +75,6 @@ std::string Upper(const std::string &str) noexcept{
     return Temp;
 }
 
-
 std::string Lower(const std::string &str) noexcept{
 
     std::string Temp = str;
@@ -133,8 +132,6 @@ std::string Center(const std::string &str, int width, char fill) noexcept{
         std::string Temp = RJust(str, str.length() + left, fill);
         return LJust(Temp, width, fill);
     }
-    
-
 
 std::string LJust(const std::string &str, int width, char fill) noexcept{
 
@@ -170,8 +167,6 @@ std::string RJust(const std::string &str, int width, char fill) noexcept{
         Temp += str;
         return Temp;
     }
-    
-
 
 std::string Replace(const std::string &str, const std::string &old, const std::string &rep) noexcept{
 
@@ -247,7 +242,6 @@ std::vector< std::string > Split(const std::string &str, const std::string &splt
 
 }
 
-
 std::string Join(const std::string &str, const std::vector< std::string > &vect) noexcept{
 
     if (vect.empty()) {
@@ -292,57 +286,51 @@ std::string ExpandTabs(const std::string &str, int tabsize) noexcept{
     return Temp;
 }
 
-
 int EditDistance(const std::string &left, const std::string &right, bool ignorecase) noexcept{
    
-
 std::string a = left;
 std::string b = right;
 
-
 if (ignorecase) {
-a= Lower(a);
-b= Lower(b);
-
+    a = Lower(a);
+    b = Lower(b);
 }
 
 int x = a.length();
 int y = b.length();
 
-
-int arr[x + 1][y + 1];
-
+// Use std::vector instead of variable-length array (VLA)
+std::vector<std::vector<int>> arr(x + 1, std::vector<int>(y + 1, 0));
 
 for (int i = 0; i <= x; i++) {
-arr[i][0] = i;   
+    arr[i][0] = i;   
 }
 for (int j = 0; j <= y; j++) {
-arr[0][j] = j;   
+    arr[0][j] = j;   
 }
 
 for (int i = 1; i <= x; i++) {
-for (int j = 1; j <= y; j++) {
+    for (int j = 1; j <= y; j++) {
+        if (a[i - 1] == b[j - 1]) {
+            arr[i][j] = arr[i - 1][j - 1]; 
+        } else {
+            int num1  = arr[i][j - 1] + 1; 
+            int num2  = arr[i - 1][j] + 1; 
+            int num3 = arr[i - 1][j - 1] + 1; 
 
-   if (a[i - 1] == b[j - 1]) {
-       arr[i][j] = arr[i - 1][j - 1]; 
-   } else {
-       int num1  = arr[i][j - 1] + 1; 
-       int num2  = arr[i - 1][j] + 1; 
-       int num3 = arr[i - 1][j - 1] + 1; 
+            int best = num1;
 
-       int best = num1;
+            if (num2 < best) {
+                best = num2;
+            }
 
-if (num2 < best) {
-    best = num2;
-}
+            if (num3 < best) {
+                best = num3;
+            }
 
-if (num3 < best) {
-    best = num3;
-}
-
-arr[i][j] = best;
-   }
-}
+            arr[i][j] = best;
+        }
+    }
 }
 
 return arr[x][y];
