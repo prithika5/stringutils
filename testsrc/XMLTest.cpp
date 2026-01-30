@@ -2,6 +2,8 @@
 #include <memory>
 #include <string>
 
+#include "XMLReader.h"
+#include "StringDataSource.h"
 #include "XMLWriter.h"
 #include "StringDataSink.h"
 
@@ -87,4 +89,66 @@ TEST(XMLWriterTest, EscapesAttributeValues){
 
     EXPECT_TRUE(w.WriteEntity(e));
     EXPECT_EQ(sink->String(), "<a x=\"&quot;&amp;&lt;&gt;\">");
+}
+
+TEST(XMLReaderTest, EmptyInput_EndImmediately){
+    auto src = std::make_shared<CStringDataSource>("");
+    CXMLReader r(src);
+
+    SXMLEntity e;
+    EXPECT_FALSE(r.ReadEntity(e));
+    EXPECT_TRUE(r.End());
+}
+
+TEST(XMLReaderTest, ReadsStartAndEnd){
+    auto src = std::make_shared<CStringDataSource>("<a></a>");
+    CXMLReader r(src);
+
+    SXMLEntity e;
+
+    ASSERT_TRUE(r.ReadEntity(e));
+    EXPECT_EQ(e.DType, SXMLEntity::EType::StartElement);
+    EXPECT_EQ(e.DNameData, "a");
+
+    ASSERT_TRUE(r.ReadEntity(e));
+    EXPECT_EQ(e.DType, SXMLEntity::EType::EndElement);
+    EXPECT_EQ(e.DNameData, "a");
+}
+
+TEST(XMLReaderTest, ReadsCompleteElement){
+    auto src = std::make_shared<CStringDataSource>("<a/>");
+    CXMLReader r(src);
+
+    SXMLEntity e;
+    ASSERT_TRUE(r.ReadEntity(e));
+    EXPECT_EQ(e.DType, SXMLEntity::EType::CompleteElement);
+    EXPECT_EQ(e.DNameData, "a");
+}
+
+TEST(XMLReaderTest, ReadsAttributes){
+    auto src = std::make_shared<CStringDataSource>("<a x=\"1\" y=\"two\"/>");
+    CXMLReader r(src);
+
+    SXMLEntity e;
+    ASSERT_TRUE(r.ReadEntity(e));
+    EXPECT_EQ(e.DType, SXMLEntity::EType::CompleteElement);
+    EXPECT_EQ(e.DNameData, "a");
+
+    EXPECT_TRUE(e.AttributeExists("x"));
+    EXPECT_TRUE(e.AttributeExists("y"));
+    EXPECT_EQ(e.AttributeValue("x"), "1");
+    EXPECT_EQ(e.AttributeValue("y"), "two");
+}
+
+TEST(XMLReaderTest, ReadsCharData){
+    auto src = std::make_shared<CStringDataSource>("<a>hello</a>");
+    CXMLReader r(src);
+
+    SXMLEntity e;
+
+    ASSERT_TRUE(r.ReadEntity(e)); // <a>
+    ASSERT_TRUE(r.ReadEntity(e)); // chardata
+    EXPECT_EQ(e.DType, SXMLEntity::EType::CharData);
+    EXPECT_EQ(e.DNameData, "hello");
+    ASSERT_TRUE(r.ReadEntity(e)); // </a>
 }
