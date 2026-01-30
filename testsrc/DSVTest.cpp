@@ -24,3 +24,39 @@ TEST(DSVWriterTest, SingleRowTest){
     EXPECT_EQ(DataSink->String(),"A,B,C");
 
 }
+
+TEST(DSVWriterTest, QuotesWhenDelimiterInCell){
+    auto sink = std::make_shared<CStringDataSink>();
+    CDSVWriter w(sink, ',');
+    EXPECT_TRUE(w.WriteRow({"A,B","C"}));
+    EXPECT_EQ(sink->String(), "\"A,B\",C");
+}
+
+TEST(DSVWriterTest, EscapesDoubleQuotes){
+    auto sink = std::make_shared<CStringDataSink>();
+    CDSVWriter w(sink, ',');
+    EXPECT_TRUE(w.WriteRow({"He said \"hi\""}));
+    EXPECT_EQ(sink->String(), "\"He said \"\"hi\"\"\"");
+}
+
+TEST(DSVWriterTest, QuotesWhenNewlineInCell){
+    auto sink = std::make_shared<CStringDataSink>();
+    CDSVWriter w(sink, ',');
+    EXPECT_TRUE(w.WriteRow({"A\nB","C"}));
+    EXPECT_EQ(sink->String(), "\"A\nB\",C");
+}
+
+TEST(DSVWriterTest, QuoteAllQuotesEverything){
+    auto sink = std::make_shared<CStringDataSink>();
+    CDSVWriter w(sink, ',', true);
+    EXPECT_TRUE(w.WriteRow({"A","B"}));
+    EXPECT_EQ(sink->String(), "\"A\",\"B\"");
+}
+
+TEST(DSVWriterTest, QuoteDelimiterMeansComma){
+    auto sink = std::make_shared<CStringDataSink>();
+    CDSVWriter w(sink, '"'); // should behave like comma
+    EXPECT_TRUE(w.WriteRow({"A","B"}));
+    EXPECT_EQ(sink->String(), "A,B");
+}
+
