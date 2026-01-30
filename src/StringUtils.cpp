@@ -299,7 +299,7 @@ if (ignorecase) {
 int x = a.length();
 int y = b.length();
 
-// Use std::vector instead of variable-length array (VLA)
+
 std::vector<std::vector<int>> arr(x + 1, std::vector<int>(y + 1, 0));
 
 for (int i = 0; i <= x; i++) {
