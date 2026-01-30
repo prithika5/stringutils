@@ -4,69 +4,121 @@ CC=gcc
 CXX=g++
 
 # Define the directories
-INC_DIR			= ./include
-SRC_DIR			= ./src
-BIN_DIR			= ./bin
-OBJ_DIR			= ./obj
-LIB_DIR			= ./lib
-TESTSRC_DIR		= ./testsrc
-TESTOBJ_DIR		= ./testobj
-TESTBIN_DIR		= ./testbin
-TESTCOVER_DIR 	= ./htmlcov
-
-# vcpkg configuration
-VCPKG_DIR ?= /Users/prithikathilakarajan/Projects/vcpkg
-VCPKG_TRIPLET ?= arm64-osx
-GTEST_INCLUDE_PATH ?= $(VCPKG_DIR)/packages/gtest_$(VCPKG_TRIPLET)/include
-GTEST_LIB_PATH ?= $(VCPKG_DIR)/packages/gtest_$(VCPKG_TRIPLET)/lib
-GTEST_MANUAL_LINK_PATH ?= $(GTEST_LIB_PATH)/manual-link
+INC_DIR         = ./include
+SRC_DIR         = ./src
+BIN_DIR         = ./bin
+OBJ_DIR         = ./obj
+LIB_DIR         = ./lib
+TESTSRC_DIR     = ./testsrc
+TESTOBJ_DIR     = ./testobj
+TESTBIN_DIR     = ./testbin
+TESTCOVER_DIR   = ./htmlcov
 
 # Define the flags
-DEFINES			= 
-INCLUDE			+= -I $(INC_DIR)
-CFLAGS			+=
-CPPFLAGS		+= -std=c++17
-LDFLAGS			 = 
+DEFINES         =
+INCLUDE         += -I $(INC_DIR)
+CFLAGS          +=
+CPPFLAGS        += -std=c++20
+LDFLAGS         =
 
-ifdef GTEST_INCLUDE_PATH
-	INCLUDE += -I $(GTEST_INCLUDE_PATH)
-endif
+TEST_CFLAGS     = $(CFLAGS) -O0 -g --coverage
+TEST_CPPFLAGS   = $(CPPFLAGS) -fno-inline
+TEST_LDFLAGS    = $(LDFLAGS) -lgtest_main -lgtest -lpthread
+XML_LDFLAGS     = -lexpat
 
-ifdef GTEST_LIB_PATH
-	LDFLAGS += -L $(GTEST_LIB_PATH)
-endif
+# -------------------------
+# Test object files
+# -------------------------
+TEST_STR_OBJ_FILES      = $(TESTOBJ_DIR)/StringUtils.o $(TESTOBJ_DIR)/StringUtilsTest.o
+TEST_STRSRC_OBJ_FILES   = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/StringDataSourceTest.o
+TEST_STRSINK_OBJ_FILES  = $(TESTOBJ_DIR)/StringDataSink.o $(TESTOBJ_DIR)/StringDataSinkTest.o
 
-TEST_LDFLAGS = $(LDFLAGS) $(GTEST_MANUAL_LINK_PATH)/libgtest_main.a -lgtest -lpthread
+# DSV tests should include BOTH reader and writer, and string source/sink helpers
+TEST_DSV_OBJ_FILES      = \
+    $(TESTOBJ_DIR)/StringDataSource.o \
+    $(TESTOBJ_DIR)/StringDataSink.o \
+    $(TESTOBJ_DIR)/DSVReader.o \
+    $(TESTOBJ_DIR)/DSVWriter.o \
+    $(TESTOBJ_DIR)/DSVTest.o
 
-ifdef GTEST_MAIN_A
-	TEST_LDFLAGS = $(LDFLAGS) $(GTEST_MAIN_A) -lgtest -lpthread
-endif
+# XML tests should include reader+writer, string source/sink, and link expat
+TEST_XML_OBJ_FILES      = \
+    $(TESTOBJ_DIR)/StringDataSource.o \
+    $(TESTOBJ_DIR)/StringDataSink.o \
+    $(TESTOBJ_DIR)/XMLReader.o \
+    $(TESTOBJ_DIR)/XMLWriter.o \
+    $(TESTOBJ_DIR)/XMLTest.o
 
+# -------------------------
+# Test targets (executables)
+# -------------------------
+TEST_STR_TARGET      = $(TESTBIN_DIR)/teststrutils
+TEST_STRSRC_TARGET   = $(TESTBIN_DIR)/teststrdatasource
+TEST_STRSINK_TARGET  = $(TESTBIN_DIR)/teststrdatasink
+TEST_DSV_TARGET      = $(TESTBIN_DIR)/testdsv
+TEST_XML_TARGET      = $(TESTBIN_DIR)/testxml
 
-TEST_CFLAGS		= $(CFLAGS) -O0 -g --coverage
-TEST_CPPFLAGS	= $(CPPFLAGS) -fno-inline
-TEST_OBJ_FILES	= $(TESTOBJ_DIR)/StringUtilsTest.o $(TESTOBJ_DIR)/StringUtils.o
-TEST_TARGET		= $(TESTBIN_DIR)/teststrutils 
+# -------------------------
+# Top-level target
+# -------------------------
+all: directories run_strtest run_strsrctest run_strsinktest run_dsvtest run_xmltest gencoverage
 
+# -------------------------
+# Run targets (professor style)
+# -------------------------
+run_strtest: $(TEST_STR_TARGET)
+	$(TEST_STR_TARGET)
 
-all: directories runtests
+run_strsrctest: $(TEST_STRSRC_TARGET)
+	$(TEST_STRSRC_TARGET)
 
-runtests: $(TEST_TARGET)
-	$(TEST_TARGET)
-	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,unsupported,format
-	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' '*/gtest/*' --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,unsupported,format
-	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR) --ignore-errors inconsistent,unsupported,format,corrupt,category
+run_strsinktest: $(TEST_STRSINK_TARGET)
+	$(TEST_STRSINK_TARGET)
 
-$(TEST_TARGET): $(TEST_OBJ_FILES)
-	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_TARGET)
+run_dsvtest: $(TEST_DSV_TARGET)
+	$(TEST_DSV_TARGET)
 
+run_xmltest: $(TEST_XML_TARGET)
+	$(TEST_XML_TARGET)
 
-$(TESTOBJ_DIR)/StringUtilsTest.o: $(TESTSRC_DIR)/StringUtilsTest.cpp
-	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) -c $(TESTSRC_DIR)/StringUtilsTest.cpp -o $(TESTOBJ_DIR)/StringUtilsTest.o
+# -------------------------
+# Coverage
+# -------------------------
+gencoverage:
+	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,source
+	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' --output-file $(TESTCOVER_DIR)/coverage.info
+	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR)
 
-$(TESTOBJ_DIR)/StringUtils.o: $(SRC_DIR)/StringUtils.cpp
-	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) -c $(SRC_DIR)/StringUtils.cpp -o $(TESTOBJ_DIR)/StringUtils.o
+# -------------------------
+# Link rules
+# -------------------------
+$(TEST_STR_TARGET): $(TEST_STR_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_STR_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_STR_TARGET)
 
+$(TEST_STRSRC_TARGET): $(TEST_STRSRC_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_STRSRC_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_STRSRC_TARGET)
+
+$(TEST_STRSINK_TARGET): $(TEST_STRSINK_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_STRSINK_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_STRSINK_TARGET)
+
+$(TEST_DSV_TARGET): $(TEST_DSV_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_DSV_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_DSV_TARGET)
+
+$(TEST_XML_TARGET): $(TEST_XML_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_XML_OBJ_FILES) $(TEST_LDFLAGS) $(XML_LDFLAGS) -o $(TEST_XML_TARGET)
+
+# -------------------------
+# Compile rules
+# -------------------------
+$(TESTOBJ_DIR)/%.o: $(TESTSRC_DIR)/%.cpp
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+
+$(TESTOBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+
+# -------------------------
+# Directory creation
+# -------------------------
 .PHONY: directories
 directories:
 	mkdir -p $(BIN_DIR)
@@ -76,6 +128,10 @@ directories:
 	mkdir -p $(TESTOBJ_DIR)
 	mkdir -p $(TESTCOVER_DIR)
 
+# -------------------------
+# Clean
+# -------------------------
+.PHONY: clean
 clean::
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
@@ -83,5 +139,3 @@ clean::
 	rm -rf $(TESTBIN_DIR)
 	rm -rf $(TESTOBJ_DIR)
 	rm -rf $(TESTCOVER_DIR)
-
-.PHONY: clean
